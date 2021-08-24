@@ -3,4 +3,6 @@
     <string name="email">Email Address</string>
     <string name="submit">Submit</string>
     <string name="sign_out">Sign out</string>
+    <string name="roll">Roll Die</string>
+    <string name="sides_hint">Number of sides</string>
 </resources>

@@ -13,14 +13,10 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.commit
 import androidx.fragment.app.replace
-import com.example.combattracker.Constants.FS_COL_USERS
-import com.example.combattracker.Constants.FS_KEY_EMAIL
 import com.example.combattracker.Constants.KEY_EMAIL_ADDRESS
-import com.example.combattracker.Constants.KEY_SIGN_IN_LINK
 import com.example.combattracker.Constants.LOG_TAG
 import com.google.firebase.auth.ktx.actionCodeSettings
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
 /**
