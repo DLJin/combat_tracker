@@ -1,5 +1,6 @@
 package com.example.combattracker
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -19,7 +20,10 @@ import com.example.combattracker.Constants.FS_COL_ROLLS
 import com.example.combattracker.Constants.FS_DOC_USER
 import com.example.combattracker.Constants.FS_DOC_VAL
 import com.example.combattracker.Constants.LOG_TAG
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.DocumentChange
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.functions.ktx.functions
 import com.google.firebase.ktx.Firebase
@@ -30,6 +34,10 @@ import com.google.firebase.ktx.Firebase
 class DashboardFragment : Fragment() {
     var editSides: EditText? = null
     var txtRoll: TextView? = null
+    var txtHistory: TextView? = null
+
+    var db: FirebaseFirestore? = null
+    var auth: FirebaseAuth? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,6 +55,10 @@ class DashboardFragment : Fragment() {
         rootView.findViewById<Button>(R.id.button_signout).setOnClickListener {
             Firebase.auth.signOut()
             goToLogin()
+        }
+
+        rootView.findViewById<Button>(R.id.button_compose).setOnClickListener {
+            startActivity(Intent(context, PlayerView::class.java))
         }
 
         editSides = rootView.findViewById(R.id.edit_sides)
@@ -73,16 +85,39 @@ class DashboardFragment : Fragment() {
             }
         }
 
+        txtHistory = rootView.findViewById(R.id.txt_history)
+        db = Firebase.firestore
+        auth = Firebase.auth
+        db?.apply {
+            collection(FS_COL_ROLLS)
+                .whereNotEqualTo(FS_DOC_USER, auth?.currentUser?.uid)
+                .addSnapshotListener {snapshots, e ->
+                    if (e != null) {
+                        Log.e(LOG_TAG, "listen:error", e)
+                        return@addSnapshotListener
+                    }
+
+                    for (dc in snapshots!!.documentChanges) {
+                        when (dc.type) {
+                            DocumentChange.Type.ADDED -> txtHistory?.text = (dc.document.data.get(FS_DOC_VAL) as Long).toString()
+                            else -> Log.d(LOG_TAG, "Ignoring roll from snapshot.")
+                        }
+                    }
+                }
+        }
+
         return rootView
     }
 
     private fun registerRoll(roll: Int?) {
-        val data = hashMapOf(FS_DOC_USER to Firebase.auth.currentUser?.uid, FS_DOC_VAL to roll)
-        Firebase.firestore.collection(FS_COL_ROLLS).add(data).addOnCompleteListener { task ->
-            if(task.isSuccessful) {
-                Log.d(LOG_TAG, "Stored roll to database.")
-            } else {
-                Log.e(LOG_TAG, task.exception?.message.orEmpty())
+        val data = hashMapOf(FS_DOC_USER to auth?.currentUser?.uid, FS_DOC_VAL to roll)
+        db?.apply {
+            collection(FS_COL_ROLLS).add(data).addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d(LOG_TAG, "Stored roll to database.")
+                } else {
+                    Log.e(LOG_TAG, task.exception?.message.orEmpty())
+                }
             }
         }
     }

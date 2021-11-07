@@ -5,4 +5,7 @@
     <string name="sign_out">Sign out</string>
     <string name="roll">Roll Die</string>
     <string name="sides_hint">Number of sides</string>
+    <string name="roll_history">Most recent roll from others:</string>
+    <string name="title_activity_player_view">PlayerView</string>
+    <string name="compose">Compose</string>
 </resources>
