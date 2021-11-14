@@ -45,7 +45,7 @@ class ComposeActivity : ComponentActivity() {
                         allScreens.forEach { screen ->
                             BottomNavigationItem(
                                 icon = {Icon(screen.icon, contentDescription = null)},
-                                label = {Text(screen.name)},
+                                label = {Text(screen.displayName)},
                                 selected = currentDestination?.hierarchy?.any {it.route == screen.route} == true,
                                 onClick = {
                                     navController.navigate(screen.route) {
@@ -104,5 +104,5 @@ fun createDummyData(): List<Entity> {
         focusFactor = 5.0
     )
 
-    return listOf(ixar, seren, elmo, bandit, bandit, bandit, bandit, bandit)
+    return listOf(ixar, seren, elmo, bandit)
 }

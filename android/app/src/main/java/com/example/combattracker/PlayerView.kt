@@ -77,7 +77,11 @@ fun PlayerViewBody(controller: NavController, players: List<Entity>) {
 }
 
 @Composable
-fun DisplayPlayer(player: Entity) {
+fun DisplayPlayer(player: Entity?) {
+    if(player == null) {
+        Text("No given player")
+        return
+    }
     Column(
         modifier = Modifier.padding(8.dp)
     ) {
