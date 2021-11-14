@@ -10,9 +10,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CombatTracker">
         <activity
-            android:name=".PlayerView"
+            android:name=".ComposeActivity"
             android:exported="false"
-            android:label="@string/title_activity_player_view"
+            android:label="@string/title_activity_compose"
             android:theme="@style/Theme.CombatTracker" />
         <activity
             android:name=".MainActivity"

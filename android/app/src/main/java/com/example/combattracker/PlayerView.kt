@@ -21,90 +21,58 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.combattracker.model.Entity
 import com.example.combattracker.ui.theme.CombatTrackerTheme
 
-class PlayerView : ComponentActivity() {
-
-    val ixar = Entity(
-        name = "Ixar",
-        attributes = Entity.Attributes(13, 12, 8, 10, 15, 14),
-        movement = 30,
-        healthFactor = 12.0,
-        focusFactor = 6.5
-    )
-
-    val seren = Entity(
-        name = "Seren",
-        attributes = Entity.Attributes(8, 12, 15, 14, 13, 12),
-        movement = 30,
-        healthFactor = 11.0,
-        focusFactor = 7.0
-    )
-
-    val elmo = Entity(
-        name = "Elmo Elless",
-        attributes = Entity.Attributes(13, 10, 14, 15, 12, 8),
-        movement = 45,
-        healthFactor = 13.0,
-        focusFactor = 6.0
-    )
-
-    val players = mutableListOf(ixar, seren, elmo)
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        setContent {
-            var expanded by remember { mutableStateOf(false) }
-            var selectedPlayer by remember { mutableStateOf(ixar) }
-            val icon = if (expanded) {
-                Icons.Filled.ArrowDropUp
-            } else {
-                Icons.Filled.ArrowDropDown
-            }
-            CombatTrackerTheme {
-                Column {
-                    Button(
-                        onClick = {finish()},
-                        modifier = Modifier.padding(8.dp)
-                    ) {
-                        Text("Back")
+@Composable
+fun PlayerViewBody(controller: NavController, players: List<Entity>) {
+    val activity = LocalContext.current as? Activity
+    var expanded by remember { mutableStateOf(false) }
+    var selectedPlayer by remember { mutableStateOf(players[0]) }
+    val icon = if (expanded) {
+        Icons.Filled.ArrowDropUp
+    } else {
+        Icons.Filled.ArrowDropDown
+    }
+    Column {
+        Button(
+            onClick = { activity?.finish() },
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Text("Exit")
+        }
+        Box(
+            modifier = Modifier.padding(8.dp)
+        ) {
+            OutlinedTextField(
+                value = selectedPlayer.name,
+                onValueChange = { },
+                label = { Text("Player") },
+                trailingIcon = {
+                    Icon(
+                        icon,
+                        "contentDescription",
+                        Modifier.clickable { expanded = !expanded })
+                },
+                singleLine = true,
+                readOnly = true
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                players.forEach { player ->
+                    DropdownMenuItem(onClick = {
+                        selectedPlayer = player
+                        expanded = false
+                    }) {
+                        Text(text = player.name)
                     }
-                    Box(
-                        modifier = Modifier.padding(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = selectedPlayer.name,
-                            onValueChange = { },
-                            label = { Text("Player") },
-                            trailingIcon = {
-                                Icon(
-                                    icon,
-                                    "contentDescription",
-                                    Modifier.clickable { expanded = !expanded })
-                            },
-                            singleLine = true,
-                            readOnly = true
-                        )
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            players.forEach { player ->
-                                DropdownMenuItem(onClick = {
-                                    selectedPlayer = player
-                                    expanded = false
-                                }) {
-                                    Text(text = player.name)
-                                }
-                            }
-                        }
-                    }
-                    DisplayPlayer(player = selectedPlayer)
                 }
             }
         }
+        DisplayPlayer(player = selectedPlayer)
     }
 }
 
@@ -153,5 +121,10 @@ fun DisplayPlayer(player: Entity) {
         Text(
             text = "Movement: ${player.movement}"
         )
+        Text(
+            text = "Initiative: ${player.initiative}"
+        )
     }
 }
+
+

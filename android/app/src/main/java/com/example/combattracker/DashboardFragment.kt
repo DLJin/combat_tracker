@@ -58,7 +58,7 @@ class DashboardFragment : Fragment() {
         }
 
         rootView.findViewById<Button>(R.id.button_compose).setOnClickListener {
-            startActivity(Intent(context, PlayerView::class.java))
+            startActivity(Intent(context, ComposeActivity::class.java))
         }
 
         editSides = rootView.findViewById(R.id.edit_sides)
