@@ -1,0 +1,106 @@
+--[[ Lua code. See documentation: https://api.tabletopsimulator.com/ --]]
+
+ss_id = '1DJIjX4YQeA1kyI8EkvK-EFGbiApupmA7FtWEWtstw3E'
+ss_tab = 'DM%20Sheet'
+ss_key = ''
+
+refresh_cadence = 10 --seconds
+timer = 0
+last_updated = nil
+did_first_refresh = false
+do_http_call = false
+
+players = {}
+player_names = {}
+player_data = {}
+
+current_player = nil
+displayed_player = nil
+
+button_parameters = {
+  click_function = "buttonClicked", function_owner = nil, label = "Click Me",
+  position = {0,1,0}, rotation = {0,0,0}, width = 500, height = 200,
+  font_size = 100
+}
+
+--[[ The onLoad event is called after the game save finishes loading. --]]
+function onLoad()
+    timer = 0
+    Grid.show_lines = true
+    Grid.thick_lines = false
+
+    players = getObjectsWithTag("Player")
+    player_names = {}
+    for i, p in ipairs(players) do
+      player_names[p.getName()] = p.getName()
+    end
+
+    refreshData()
+end
+
+--[[ The onUpdate event is called once per frame. --]]
+function onUpdate()
+    timer = timer + Time.delta_time
+    if timer >= refresh_cadence then
+      timer = 0
+      refreshData()
+    end
+
+    if last_updated ~= nil then
+      UI.setValue("last_updated", "Last Updated: " .. math.floor(os.difftime(os.time(), last_updated)) .. " second(s) ago")
+    end
+
+    if current_player ~= nil and current_player ~= displayed_player then
+      displayed_player = current_player
+      updatePlayerUI()
+    end
+end
+
+function refreshData()
+  last_updated = os.time() --os.date("%X")
+  if do_http_call or not did_first_refresh then
+    did_first_refresh = true
+    ss_url = 'https://sheets.googleapis.com/v4/spreadsheets/' .. ss_id .. '/values/' .. ss_tab .. '?alt=json&key=' .. ss_key
+    WebRequest.get(ss_url, function(request)
+      if request.is_error then
+        print(request.error)
+      else
+        json_data = JSON.decode(request.text)
+        for i, line in ipairs(json_data['values']) do
+          if player_names[line[1]] ~= nil then
+            --print("Player '" .. line[1] .. "' found!")
+            player_data[line[1]] = {
+              hp_curr = tonumber(line[3]),
+              hp_total = tonumber(line[5]),
+              fp_curr = tonumber(line[6]),
+              fp_total = tonumber(line[8])
+            }
+          end
+        end
+        updatePlayerUI()
+      end
+    end
+    )
+  end
+end
+
+function updatePlayerUI()
+  if displayed_player ~= nil then
+    UI.setValue("player_name", displayed_player)
+    UI.setValue("player_hp", "HP: " .. player_data[displayed_player].hp_curr .. "/" .. player_data[displayed_player].hp_total)
+    UI.setValue("player_fp", "FP: " .. player_data[displayed_player].fp_curr .. "/" .. player_data[displayed_player].fp_total)
+  end
+end
+
+function onObjectHover(player_color, hover_object)
+  if hover_object == nil then
+    current_player = nil
+    return
+  end
+  for i, t in ipairs(hover_object.getTags()) do
+    if t == "Player" then
+      current_player = hover_object.getName()
+      break
+    end
+  end
+end
