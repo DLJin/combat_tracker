@@ -11,6 +11,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.fragment.app.commit
 import androidx.fragment.app.replace
 import com.example.combattracker.Constants.FN_C_ROLL
@@ -46,6 +47,7 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
