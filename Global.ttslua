@@ -17,12 +17,6 @@ player_data = {}
 current_player = nil
 displayed_player = nil
 
-button_parameters = {
-  click_function = "buttonClicked", function_owner = nil, label = "Click Me",
-  position = {0,1,0}, rotation = {0,0,0}, width = 500, height = 200,
-  font_size = 100
-}
-
 --[[ The onLoad event is called after the game save finishes loading. --]]
 function onLoad()
     timer = 0
@@ -103,4 +97,8 @@ function onObjectHover(player_color, hover_object)
       break
     end
   end
+end
+
+function toggleUpdates()
+  do_http_call = UI.getAttribute("toggle_calls", "isOn")
 end
