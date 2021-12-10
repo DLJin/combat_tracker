@@ -1,7 +1,7 @@
 --[[ Lua code. See documentation: https://api.tabletopsimulator.com/ --]]
 
 ss_id = '1DJIjX4YQeA1kyI8EkvK-EFGbiApupmA7FtWEWtstw3E'
-ss_tab = 'DM%20Sheet'
+ss_tab = 'Units' --'DM%20Sheet'
 ss_key = ''
 
 refresh_cadence = 10 --seconds
@@ -14,28 +14,15 @@ players = {}
 player_names = {}
 player_data = {}
 
-current_player = nil
-displayed_player = nil
-
 --[[ The onLoad event is called after the game save finishes loading. --]]
 function onLoad()
-    timer = 0
-    Grid.show_lines = true
-    Grid.thick_lines = false
-
-    players = getObjectsWithTag("Player")
-    player_names = {}
-    for i, p in ipairs(players) do
-      player_names[p.getName()] = p.getName()
-    end
-
-    refreshData()
+  reloadScript()
 end
 
 --[[ The onUpdate event is called once per frame. --]]
 function onUpdate()
     timer = timer + Time.delta_time
-    if timer >= refresh_cadence then
+    if do_http_call and timer >= refresh_cadence then
       timer = 0
       refreshData()
     end
@@ -50,55 +37,118 @@ function onUpdate()
     end
 end
 
+function reloadScript()
+  timer = 0
+
+  players = getObjectsWithTag("Player")
+  player_names = {}
+  for i, p in ipairs(players) do
+    player_names[p.getName()] = p.getName()
+  end
+
+  refreshData()
+end
+
 function refreshData()
   last_updated = os.time() --os.date("%X")
-  if do_http_call or not did_first_refresh then
-    did_first_refresh = true
-    ss_url = 'https://sheets.googleapis.com/v4/spreadsheets/' .. ss_id .. '/values/' .. ss_tab .. '?alt=json&key=' .. ss_key
-    WebRequest.get(ss_url, function(request)
-      if request.is_error then
-        print(request.error)
-      else
-        json_data = JSON.decode(request.text)
-        for i, line in ipairs(json_data['values']) do
-          if player_names[line[1]] ~= nil then
-            --print("Player '" .. line[1] .. "' found!")
-            player_data[line[1]] = {
-              hp_curr = tonumber(line[3]),
-              hp_total = tonumber(line[5]),
-              fp_curr = tonumber(line[6]),
-              fp_total = tonumber(line[8])
-            }
-          end
+  ss_url = 'https://sheets.googleapis.com/v4/spreadsheets/' .. ss_id .. '/values/' .. ss_tab .. '?alt=json&key=' .. ss_key
+  WebRequest.get(ss_url, function(request)
+    if request.is_error then
+      print(request.error)
+    else
+      json_data = JSON.decode(request.text)
+      for i, line in ipairs(json_data['values']) do
+        if player_names[line[1]] ~= nil then
+          player_data[line[1]] = {
+            name = line[1],
+            hp_curr = tonumber(line[11]),
+            hp_total = math.ceil(tonumber(line[9]) * tonumber(line[2])),
+            fp_curr = tonumber(line[12]),
+            fp_total = math.ceil(tonumber(line[10]) * tonumber(line[6])),
+            initiative = tonumber(line[13]),
+            statuses = line[16],
+            abilities = line[17]
+          }
         end
-        updatePlayerUI()
       end
+      updatePlayerUI()
     end
-    )
   end
+  )
+end
+
+function mapByInits()
+  inits = {}
+  for n in pairs(player_names) do
+    p = player_data[n]
+    if p.initiative == nil then
+      p.initiative = '?'
+    end
+    if inits[p.initiative] ~= nil then
+      table.insert(inits[p.initiative], n)
+    else
+      inits[p.initiative] = {n}
+    end
+  end
+
+  return inits
+end
+
+function sortInitFn(init1, init2)
+  if init1 == nil or init1 == '?' then
+    return false
+  elseif init2 == nil or init2 == '?' then
+    return true
+  end
+  return init1 > init2
 end
 
 function updatePlayerUI()
-  if displayed_player ~= nil then
-    UI.setValue("player_name", displayed_player)
-    UI.setValue("player_hp", "HP: " .. player_data[displayed_player].hp_curr .. "/" .. player_data[displayed_player].hp_total)
-    UI.setValue("player_fp", "FP: " .. player_data[displayed_player].fp_curr .. "/" .. player_data[displayed_player].fp_total)
-  end
-end
+  playerNamesByInit = mapByInits()
+  sortedInits = {}
+  for k in pairs(playerNamesByInit) do table.insert(sortedInits, k) end
+  table.sort(sortedInits, sortInitFn)
 
-function onObjectHover(player_color, hover_object)
-  if hover_object == nil then
-    current_player = nil
-    return
-  end
-  for i, t in ipairs(hover_object.getTags()) do
-    if t == "Player" then
-      current_player = hover_object.getName()
-      break
+  xml_string = "<Panel><VerticalLayout color='#FFFFFF11' rectAlignment='MiddleRight' width='20%' height='90%' minWidth='200px' childForceExpandHeight='false'>" --<VerticalScrollView color='#FFFFFF11' noScrollbars='true' rectAlignment='MiddleRight' width='20%' height='90%' minWidth='200px'>
+  xml_string = xml_string .. "<VerticalScrollView flexibleHeight='2'><VerticalLayout height='1200' minHeight='100%' childForceExpandHeight='false'>"
+  for _, init in pairs(sortedInits) do
+    for i, name in ipairs(playerNamesByInit[init]) do
+      pd = player_data[name]
+      xml_string = xml_string .. "<VerticalLayout outline='#FFFFFFFF' outlineSize='2 2' alignment='MiddleRight' >"
+      xml_string = xml_string .. "<Text color='#FFFFFFFF' fontStyle='Bold' fontSize='18'>" .. nilCheck(pd.name) .. "</Text>"
+      xml_string = xml_string .. "<Text color='#FFFFFFFF'><b>Initiative:</b> " .. nilCheck(pd.initiative) .. "</Text>"
+      xml_string = xml_string .. "<Text color='#FFFFFFFF'><b>HP:</b> " .. nilCheck(pd.hp_curr) .. "/" .. nilCheck(pd.hp_total) .. "</Text>"
+      xml_string = xml_string .. "<Text color='#FFFFFFFF'><b>FP:</b> " .. nilCheck(pd.fp_curr) .. "/" .. nilCheck(pd.fp_total) .. "</Text>"
+      xml_string = xml_string .. "<Text color='#FFFFFFFF'><b>Statuses:</b><br/> " .. nilCheck(pd.statuses) .. "</Text>"
+      xml_string = xml_string .. "<Text color='#FFFFFFFF'><b>Abilities:</b><br/> " .. nilCheck(pd.abilities) .. "</Text>"
+      xml_string = xml_string .. "</VerticalLayout>"
     end
   end
+  xml_string = xml_string .. "</VerticalLayout></VerticalScrollView>"
+  xml_string = xml_string .. "<Text id='last_updated' color='" .. getLastUpdatedColor() .. "' fontStyle='italic' fontSize='10' minHeight='15' flexibleHeight='0'>Last Updated:</Text>"
+  xml_string = xml_string .. "<HorizontalLayout minHeight='50' flexibleHeight='0'>"
+  xml_string = xml_string .. "<Button id='toggle_calls' onClick='toggleUpdates'>Toggle auto-updates</Button>"
+  xml_string = xml_string .. "<Button id='reload' onClick='reloadScript'>Reload</Button>"
+  xml_string = xml_string .. "</HorizontalLayout>"
+  xml_string = xml_string .. "</VerticalLayout></Panel>" --</VerticalScrollView>
+  UI.setXml(xml_string)
 end
 
 function toggleUpdates()
-  do_http_call = UI.getAttribute("toggle_calls", "isOn")
+  do_http_call = not do_http_call
+  UI.setAttribute("last_updated", "color", getLastUpdatedColor())
+end
+
+function getLastUpdatedColor()
+  if do_http_call then
+    return "#88AA22FF"
+  end
+  return "#CCCCCCDD"
+end
+
+function nilCheck(str)
+  if str == nil then
+    return '?'
+  end
+  return str
 end
